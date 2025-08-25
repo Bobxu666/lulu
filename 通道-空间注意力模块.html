@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSAttention模块交互式可视化</title>
+    <style>
+        :root {
+            --primary: #3498db;
+            --secondary: #2ecc71;
+            --attention: #e74c3c;
+            --dark: #2c3e50;
+            --light: #ecf0f1;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        header {
+            background: var(--dark);
+            color: white;
+            padding: 25px 40px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.8;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .content {
+            display: flex;
+            padding: 30px;
+            gap: 30px;
+        }
+        
+        .left-panel {
+            flex: 1;
+            min-width: 300px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+        }
+        
+        .right-panel {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+        
+        .module-visualization {
+            background: white;
+            border: 1px solid #eee;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        
+        .feature-maps {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            background: white;
+            border: 1px solid #eee;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        
+        .panel-title {
+            font-size: 1.4rem;
+            color: var(--dark);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .panel-title svg {
+            width: 24px;
+            height: 24px;
+            fill: var(--primary);
+        }
+        
+        .control-group {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+        
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        input[type="range"] {
+            flex: 1;
+            height: 8px;
+            border-radius: 4px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+        }
+        
+        .value-display {
+            min-width: 40px;
+            text-align: center;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        
+        .module-diagram {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            height: 500px;
+        }
+        
+        .branches {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            margin-top: 30px;
+        }
+        
+        .branch {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            width: 45%;
+        }
+        
+        .branch-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            padding: 5px 15px;
+            border-radius: 20px;
+            color: white;
+        }
+        
+        .conv-branch .branch-title {
+            background: var(--primary);
+        }
+        
+        .attention-branch .branch-title {
+            background: var(--attention);
+        }
+        
+        .layer {
+            width: 140px;
+            height: 60px;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            margin: 15px 0;
+            position: relative;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .layer:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .layer-title {
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        
+        .layer-details {
+            font-size: 0.8rem;
+            color: #666;
+        }
+        
+        .input-output {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-top: 30px;
+        }
+        
+        .io-box {
+            width: 150px;
+            height: 100px;
+            background: white;
+            border: 2px solid var(--dark);
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .io-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        .multiply-symbol {
+            position: absolute;
+            top: 60%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            color: var(--secondary);
+        }
+        
+        .output-box {
+            margin-top: 40px;
+            width: 200px;
+            height: 120px;
+            background: white;
+            border: 3px solid var(--secondary);
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 5px;
+            margin-top: 10px;
+        }
+        
+        .grid-cell {
+            width: 40px;
+            height: 40px;
+            border: 1px solid #ddd;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.8rem;
+            font-weight: bold;
+            border-radius: 4px;
+        }
+        
+        .input-cell { background-color: #d6eaf8; }
+        .conv-cell { background-color: #d6eaf8; }
+        .att-cell { background-color: #fadbd8; }
+        .output-cell { background-color: #d5f5e3; }
+        
+        .feature-map {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .feature-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .explanation {
+            margin-top: 20px;
+            background: #f0f8ff;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .explanation h3 {
+            margin-bottom: 10px;
+            color: var(--dark);
+        }
+        
+        .explanation ul {
+            padding-left: 20px;
+        }
+        
+        .explanation li {
+            margin-bottom: 8px;
+        }
+        
+        @media (max-width: 900px) {
+            .content {
+                flex-direction: column;
+            }
+            
+            .feature-maps {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>CSAttention模块交互式可视化</h1>
+            <p class="subtitle">探索通道与空间注意力机制如何增强卷积神经网络的特征提取能力</p>
+        </header>
+        
+        <div class="content">
+            <div class="left-panel">
+                <div class="panel-title">
+                    <svg viewBox="0 0 24 24"><path d="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.67 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z"></path></svg>
+                    参数控制
+                </div>
+                
+                <div class="control-group">
+                    <label for="in-channels">输入通道数 (in_channels)</label>
+                    <div class="slider-container">
+                        <input type="range" id="in-channels" min="16" max="128" value="64" step="16">
+                        <div class="value-display" id="in-channels-value">64</div>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label for="scale">通道缩放因子 (scale)</label>
+                    <div class="slider-container">
+                        <input type="range" id="scale" min="0.25" max="1.0" value="0.5" step="0.25">
+                        <div class="value-display" id="scale-value">0.5</div>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label for="stride">卷积步长 (stride)</label>
+                    <div class="slider-container">
+                        <input type="range" id="stride" min="1" max="2" value="1" step="1">
+                        <div class="value-display" id="stride-value">1</div>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label for="kernel-size">卷积核大小</label>
+                    <div class="slider-container">
+                        <input type="range" id="kernel-size" min="3" max="7" value="3" step="2">
+                        <div class="value-display" id="kernel-size-value">3</div>
+                    </div>
+                </div>
+                
+                <div class="explanation">
+                    <h3>CSAttention工作原理</h3>
+                    <ul>
+                        <li><strong>双分支结构</strong>：模块分为特征提取分支和注意力生成分支</li>
+                        <li><strong>特征提取分支</strong>：使用卷积层提取特征（输出范围：-∞到+∞）</li>
+                        <li><strong>注意力分支</strong>：生成0-1之间的注意力权重图</li>
+                        <li><strong>特征增强</strong>：通过逐元素乘法加权重要特征，抑制不重要特征</li>
+                        <li><strong>参数共享</strong>：两个分支共享相同的中间通道数（通过scale参数控制）</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="right-panel">
+                <div class="module-visualization">
+                    <div class="panel-title">
+                        <svg viewBox="0 0 24 24"><path d="M21,16.5C21,16.88 20.79,17.21 20.47,17.38L12.57,21.82C12.41,21.94 12.21,22 12,22C11.79,22 11.59,21.94 11.43,21.82L3.53,17.38C3.21,17.21 3,16.88 3,16.5V7.5C3,7.12 3.21,6.79 3.53,6.62L11.43,2.18C11.59,2.06 11.79,2 12,2C12.21,2 12.41,2.06 12.57,2.18L20.47,6.62C20.79,6.79 21,7.12 21,7.5V16.5M12,4.15L6.04,7.5L12,10.85L17.96,7.5L12,4.15M5,15.91L11,19.29V12.58L5,9.21V15.91M19,15.91V9.21L13,12.58V19.29L19,15.91Z"></path></svg>
+                        模块结构图
+                    </div>
+                    
+                    <div class="module-diagram">
+                        <div class="input-output">
+                            <div class="io-box">
+                                <div class="io-title">输入特征</div>
+                                <div>64×64×64</div>
+                            </div>
+                        </div>
+                        
+                        <div class="branches">
+                            <div class="branch conv-branch">
+                                <div class="branch-title">特征提取分支</div>
+                                
+                                <div class="layer">
+                                    <div class="layer-title">Conv2d</div>
+                                    <div class="layer-details">3×3, stride=1</div>
+                                </div>
+                                
+                                <div class="layer">
+                                    <div class="layer-title">ReLU</div>
+                                    <div class="layer-details">激活函数</div>
+                                </div>
+                                
+                                <div class="layer">
+                                    <div class="layer-title">Conv2d</div>
+                                    <div class="layer-details">3×3, stride=1</div>
+                                </div>
+                                
+                                <div class="layer">
+                                    <div class="layer-title">ReLU</div>
+                                    <div class="layer-details">激活函数</div>
+                                </div>
+                            </div>
+                            
+                            <div class="branch attention-branch">
+                                <div class="branch-title">注意力分支</div>
+                                
+                                <div class="layer">
+                                    <div class="layer-title">Conv2d</div>
+                                    <div class="layer-details">3×3, stride=1</div>
+                                </div>
+                                
+                                <div class="layer">
+                                    <div class="layer-title">ReLU</div>
+                                    <div class="layer-details">激活函数</div>
+                                </div>
+                                
+                                <div class="layer">
+                                    <div class="layer-title">Conv2d</div>
+                                    <div class="layer-details">3×3, stride=1</div>
+                                </div>
+                                
+                                <div class="layer">
+                                    <div class="layer-title">Sigmoid</div>
+                                    <div class="layer-details">0-1权重</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="multiply-symbol">×</div>
+                        
+                        <div class="output-box">
+                            <div class="io-title">输出特征</div>
+                            <div>64×64×64</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="feature-maps">
+                    <div class="feature-map">
+                        <div class="feature-title">特征提取输出 (out_conv)</div>
+                        <div class="feature-grid">
+                            <div class="grid-cell conv-cell">1.8</div>
+                            <div class="grid-cell conv-cell">0.5</div>
+                            <div class="grid-cell conv-cell">2.1</div>
+                            <div class="grid-cell conv-cell">1.2</div>
+                            <div class="grid-cell conv-cell">0.9</div>
+                            <div class="grid-cell conv-cell">3.2</div>
+                            <div class="grid-cell conv-cell">0.7</div>
+                            <div class="grid-cell conv-cell">1.5</div>
+                            <div class="grid-cell conv-cell">2.4</div>
+                            <div class="grid-cell conv-cell">0.3</div>
+                            <div class="grid-cell conv-cell">1.7</div>
+                            <div class="grid-cell conv-cell">2.0</div>
+                            <div class="grid-cell conv-cell">0.6</div>
+                            <div class="grid-cell conv-cell">2.8</div>
+                            <div class="grid-cell conv-cell">1.1</div>
+                            <div class="grid-cell conv-cell">0.4</div>
+                        </div>
+                    </div>
+                    
+                    <div class="feature-map">
+                        <div class="feature-title">注意力权重 (out_att)</div>
+                        <div class="feature-grid">
+                            <div class="grid-cell att-cell">0.8</div>
+                            <div class="grid-cell att-cell">0.2</div>
+                            <div class="grid-cell att-cell">0.9</div>
+                            <div class="grid-cell att-cell">0.4</div>
+                            <div class="grid-cell att-cell">0.3</div>
+                            <div class="grid-cell att-cell">1.0</div>
+                            <div class="grid-cell att-cell">0.1</div>
+                            <div class="grid-cell att-cell">0.7</div>
+                            <div class="grid-cell att-cell">0.6</div>
+                            <div class="grid-cell att-cell">0.0</div>
+                            <div class="grid-cell att-cell">0.5</div>
+                            <div class="grid-cell att-cell">0.8</div>
+                            <div class="grid-cell att-cell">0.2</div>
+                            <div class="grid-cell att-cell">1.0</div>
+                            <div class="grid-cell att-cell">0.9</div>
+                            <div class="grid-cell att-cell">0.1</div>
+                        </div>
+                    </div>
+                    
+                    <div class="feature-map">
+                        <div class="feature-title">最终输出 (out_conv × out_att)</div>
+                        <div class="feature-grid">
+                            <div class="grid-cell output-cell">1.44</div>
+                            <div class="grid-cell output-cell">0.10</div>
+                            <div class="grid-cell output-cell">1.89</div>
+                            <div class="grid-cell output-cell">0.48</div>
+                            <div class="grid-cell output-cell">0.27</div>
+                            <div class="grid-cell output-cell">3.20</div>
+                            <div class="grid-cell output-cell">0.07</div>
+                            <div class="grid-cell output-cell">1.05</div>
+                            <div class="grid-cell output-cell">1.44</div>
+                            <div class="grid-cell output-cell">0.00</div>
+                            <div class="grid-cell output-cell">0.85</div>
+                            <div class="grid-cell output-cell">1.60</div>
+                            <div class="grid-cell output-cell">0.12</div>
+                            <div class="grid-cell output-cell">2.80</div>
+                            <div class="grid-cell output-cell">0.99</div>
+                            <div class="grid-cell output-cell">0.04</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 更新滑块值显示
+        document.querySelectorAll('input[type="range"]').forEach(slider => {
+            const valueDisplay = document.getElementById(`${slider.id}-value`);
+            
+            // 初始化显示
+            valueDisplay.textContent = slider.value;
+            
+            // 添加事件监听
+            slider.addEventListener('input', () => {
+                valueDisplay.textContent = slider.value;
+                updateDiagram();
+            });
+        });
+        
+        // 更新模块图
+        function updateDiagram() {
+            const inChannels = document.getElementById('in-channels').value;
+            const scale = document.getElementById('scale').value;
+            const stride = document.getElementById('stride').value;
+            const kernelSize = document.getElementById('kernel-size').value;
+            
+            // 计算中间通道数
+            const midChannels = Math.floor(inChannels * scale);
+            
+            // 更新输入和输出尺寸
+            const inputSize = stride === '1' ? '64×64' : '32×32';
+            const outputSize = stride === '1' ? '64×64' : '32×32';
+            
+            // 更新输入输出显示
+            document.querySelector('.input-output .io-box div:last-child').textContent = `${inputSize}×${inChannels}`;
+            document.querySelector('.output-box div:last-child').textContent = `${outputSize}×${inChannels}`;
+            
+            // 更新卷积层细节
+            document.querySelectorAll('.layer-details').forEach((el, index) => {
+                if (index % 4 !== 3) { // 不是激活函数层
+                    el.textContent = `${kernelSize}×${kernelSize}, stride=${stride}`;
+                }
+            });
+        }
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            updateDiagram();
+            
+            // 添加动画效果
+            animateFeatureMaps();
+        });
+        
+        // 特征图动画效果
+        function animateFeatureMaps() {
+            const cells = document.querySelectorAll('.grid-cell');
+            
+            setInterval(() => {
+                cells.forEach(cell => {
+                    if (cell.classList.contains('conv-cell')) {
+                        const currentValue = parseFloat(cell.textContent);
+                        const fluctuation = (Math.random() - 0.5) * 0.5;
+                        const newValue = Math.max(0.1, currentValue + fluctuation).toFixed(1);
+                        cell.textContent = newValue;
+                        
+                        // 更新对应的输出单元格
+                        const cellIndex = Array.from(cell.parentElement.children).indexOf(cell);
+                        const attCell = document.querySelectorAll('.att-cell')[cellIndex];
+                        const outputCell = document.querySelectorAll('.output-cell')[cellIndex];
+                        
+                        const attValue = parseFloat(attCell.textContent);
+                        const outputValue = (parseFloat(newValue) * attValue).toFixed(2);
+                        outputCell.textContent = outputValue;
+                        
+                        // 更新颜色强度
+                        const convIntensity = Math.min(1, parseFloat(newValue) / 3.5);
+                        const attIntensity = parseFloat(attValue);
+                        const outputIntensity = Math.min(1, parseFloat(outputValue) / 3.5);
+                        
+                        cell.style.backgroundColor = `rgba(52, 152, 219, ${0.3 + convIntensity * 0.7})`;
+                        attCell.style.backgroundColor = `rgba(231, 76, 60, ${0.3 + attIntensity * 0.7})`;
+                        outputCell.style.backgroundColor = `rgba(46, 204, 113, ${0.3 + outputIntensity * 0.7})`;
+                    }
+                });
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
